@@ -28,11 +28,10 @@ def montant_max_empruntable(revenu_mensuel, taux_annuel, duree_annees, apport, t
     prix_total = montant_emprunte + apport
     return round(montant_emprunte), round(prix_total)
 
-# --- Configuration de la page ---
+# --- Configuration Streamlit ---
 st.set_page_config(page_title="Simulateur Immo", page_icon="🏠", layout="centered")
-
 st.title("🏠 Simulateur Achat Locatif")
-st.markdown("**Calcule si ton achat immobilier locatif peut être autofinancé et quel est ton budget max.**")
+st.markdown("**Calcule si ton achat immobilier locatif peut être autofinancé, et ta capacité d'achat maximale.**")
 
 # --- Entrées utilisateur ---
 st.header("📥 Paramètres")
@@ -52,7 +51,12 @@ montant_emprunte = prix - apport
 mensualite = mensualite_credit(montant_emprunte, taux, duree)
 assurance = (montant_emprunte * 0.004) / 12
 mensualite_totale = mensualite + assurance
-ratio_endettement = mensualite_totale / revenu
+
+# Évite division par 0
+if revenu > 0:
+    ratio_endettement = mensualite_totale / revenu
+else:
+    ratio_endettement = 1  # Forçage d’un taux élevé si revenu nul
 
 # --- Affichage résultats autofinancement ---
 st.header("📊 Analyse de l’opération choisie")
@@ -62,19 +66,21 @@ st.write(f"**Assurance estimée (~0.4%/an) :** {assurance:.2f} €")
 st.write(f"**Mensualité totale :** {mensualite_totale:.2f} €")
 st.write(f"**Taux d’endettement :** {ratio_endettement * 100:.1f} %")
 
-if ratio_endettement > 33:
+if revenu == 0:
+    st.warning("⚠️ Tu dois entrer un revenu mensuel pour estimer la faisabilité.")
+elif ratio_endettement > 0.33:
     st.error("❌ Taux d’endettement trop élevé pour être finançable.")
 else:
     st.success("✅ Projet finançable (endettement < 33%)")
 
 # --- Calcul capacité d’achat max ---
 st.header("📈 Quelle est ta capacité d’achat maximale ?")
-emprunt_max, prix_max = montant_max_empruntable(
-    revenu, taux, duree, apport
-)
-
-st.write(f"👉 Avec un apport de **{apport:,.0f} €**, tu pourrais emprunter jusqu’à **{emprunt_max:,.0f} €**.")
-st.write(f"🏡 Cela correspond à un bien immobilier d’un prix max de **{prix_max:,.0f} €**.")
+if revenu > 0:
+    emprunt_max, prix_max = montant_max_empruntable(
+        revenu, taux, duree, apport
+    )
+    st.write(f"👉 Avec un apport de **{apport:,.0f} €**, tu pourrais emprunter jusqu’à **{emprunt_max:,.0f} €**.")
+    st.write(f"🏡 Cela correspond à un bien immobilier d’un prix max de **{prix_max:,.0f} €**.")
 
 
 
