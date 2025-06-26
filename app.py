@@ -60,38 +60,63 @@ with tabs[1]:
 
 # --- Résultats ---
 with tabs[2]:
-    st.header("📊 Résultats")
+    st.header("📊 Résultats & Synthèse")
 
-    total_mens_immo = sum(mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"]) for c in credits_immo)
-    total_mens_conso = sum(mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"]) for c in credits_conso)
-    total_existants = total_mens_immo + total_mens_conso
+    # --- Calculs ---
+    total_mensualites_immo = sum(
+        mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
+        for c in st.session_state.credits_immo
+    )
+    total_mensualites_conso = sum(
+        mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
+        for c in st.session_state.credits_conso
+    )
+    total_credits_existants = total_mensualites_immo + total_mensualites_conso
 
-    montant_nouveau = max(prix - apport, 0)
-    mensu_nouveau = mensualite_credit(montant_nouveau, taux, duree)
-    assurance_nouveau = calc_assurance(montant_nouveau)
-    total_mensualite = mensu_nouveau + assurance_nouveau + total_existants
+    montant_emprunte = max(prix - apport, 0)
+    mensu_nouveau = mensualite_credit(montant_emprunte, taux, duree) if montant_emprunte > 0 else 0
+    assurance_nouveau = calc_assurance(montant_emprunte) if montant_emprunte > 0 else 0
+    total_nouveau_credit = mensu_nouveau + assurance_nouveau
 
-    st.subheader("Synthèse")
-    st.markdown(f"- **Montant emprunté :** {montant_nouveau:,.0f} €")
-    st.markdown(f"- **Mensualité nouveau crédit :** {mensu_nouveau:,.0f} €")
-    st.markdown(f"- **Assurance :** {assurance_nouveau:,.0f} €")
-    st.markdown(f"- **Crédits existants :** {total_existants:,.0f} €")
-    st.markdown(f"- **Total mensualités :** {total_mensualite:,.0f} €")
-    st.markdown(f"- **Revenu mensuel :** {revenu:,.0f} €")
+    total_mensualites = total_credits_existants + total_nouveau_credit
+    endettement = total_mensualites / revenu if revenu > 0 else 0
 
-    # Graphique
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=["Crédits existants", "Nouveau crédit"],
-                         y=[total_existants, mensu_nouveau + assurance_nouveau],
-                         marker_color=["#636EFA", "#EF553B"]))
-    fig.update_layout(title="Mensualités par type", yaxis_title="Montant (€)",
-                      yaxis=dict(range=[0, max(total_mensualite, revenu) * 1.2]),
-                      template="plotly_white")
+    # --- Affichage simplifié ---
+    st.subheader("🧾 Résumé financier mensuel")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"- **💳 Crédits existants :** {total_credits_existants:,.0f} €")
+        st.markdown(f"- **🏠 Nouveau crédit :** {total_nouveau_credit:,.0f} €")
+        st.markdown(f"- **🧮 Total mensualités :** {total_mensualites:,.0f} €")
+    with col2:
+        st.markdown(f"- **💰 Revenu mensuel :** {revenu:,.0f} €")
+        st.markdown(f"- **📉 Taux d’endettement :** {endettement*100:.1f} %")
+
+        if endettement < 0.35:
+            st.success("🟢 Endettement maîtrisé")
+        elif endettement < 0.45:
+            st.warning("🟠 Attention à l’endettement")
+        else:
+            st.error("🔴 Endettement élevé — risque de refus bancaire")
+
+    # --- Camembert : répartition des revenus ---
+    st.subheader("📈 Répartition des revenus mensuels")
+
+    labels = ["Crédits existants", "Nouveau crédit", "Revenu restant"]
+    values = [total_credits_existants, total_nouveau_credit, max(revenu - total_mensualites, 0)]
+
+    fig = go.Figure(go.Pie(
+        labels=labels,
+        values=values,
+        hole=0.4,
+        marker_colors=["#636EFA", "#EF553B", "#00CC96"]
+    ))
+    fig.update_layout(
+        title="Répartition de votre revenu mensuel",
+        showlegend=True
+    )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Endettement
-    ratio = total_mensualite / revenu if revenu > 0 else 0
-    st.markdown(f"### 📉 Ratio d'endettement : **{ratio*100:.1f}%**")
 
 
 
