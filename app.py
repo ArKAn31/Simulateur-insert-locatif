@@ -29,18 +29,11 @@ def add_credit_immo():
 def add_credit_conso():
     st.session_state.credits_conso.append({"montant": 0, "taux": 0.05, "duree": 5})
 
-def remove_credit_immo(idx):
-    st.session_state.credits_immo.pop(idx)
-
-def remove_credit_conso(idx):
-    st.session_state.credits_conso.pop(idx)
-
 def go_to_app():
     st.session_state.page = "app"
 
 def go_to_start():
     st.session_state.page = "start"
-    # Réinitialiser si besoin
     st.session_state.credits_immo = []
     st.session_state.credits_conso = []
 
@@ -54,6 +47,7 @@ if st.session_state.page == "start":
     st.write("Cliquez sur le bouton ci-dessous pour commencer la simulation.")
     if st.button("Démarrer la simulation", on_click=go_to_app):
         pass
+
 else:
     st.title("🏠 Simulateur Achat Locatif Avancé")
 
@@ -79,7 +73,7 @@ else:
                 if st.button("20% apport"):
                     apport = int(prix * 0.20)
 
-            # Mettre à jour le slider avec la nouvelle valeur apport si modifiée par bouton
+            # Slider ajusté si modifié par bouton
             apport = st.slider("💼 Apport personnel ajusté (€)", min_value=0, max_value=prix, value=apport, step=1000)
 
             apport_pct = (apport / prix * 100) if prix > 0 else 0
@@ -100,6 +94,7 @@ else:
             if st.button("➕ Ajouter un crédit immobilier"):
                 add_credit_immo()
 
+            indices_a_supprimer_immo = []
             for i, credit in enumerate(st.session_state.credits_immo):
                 with st.expander(f"Crédit immobilier #{i+1}", expanded=True):
                     colm1, colm2, colm3, colm4 = st.columns([2, 2, 2, 1])
@@ -111,12 +106,18 @@ else:
                         duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}", min_value=1, max_value=40, value=credit["duree"], key=f"immo_duree_{i}")
                     with colm4:
                         if st.button(f"❌ Supprimer", key=f"immo_del_{i}"):
-                            remove_credit_immo(i)
-                            st.experimental_rerun()
-                    # Update state
+                            indices_a_supprimer_immo.append(i)
+
+                    # Mise à jour des données
                     st.session_state.credits_immo[i]["montant"] = montant
                     st.session_state.credits_immo[i]["taux"] = taux_
                     st.session_state.credits_immo[i]["duree"] = duree_
+
+            # Suppression hors boucle
+            if indices_a_supprimer_immo:
+                for idx in sorted(indices_a_supprimer_immo, reverse=True):
+                    st.session_state.credits_immo.pop(idx)
+                st.experimental_rerun()
 
         # CONSO
         st.subheader("Crédits à la consommation")
@@ -125,6 +126,7 @@ else:
             if st.button("➕ Ajouter un crédit conso"):
                 add_credit_conso()
 
+            indices_a_supprimer_conso = []
             for i, credit in enumerate(st.session_state.credits_conso):
                 with st.expander(f"Crédit conso #{i+1}", expanded=True):
                     colc1, colc2, colc3, colc4 = st.columns([2, 2, 2, 1])
@@ -136,12 +138,18 @@ else:
                         duree_ = st.number_input(f"Durée restante (années) crédit conso #{i+1}", min_value=1, max_value=20, value=credit["duree"], key=f"conso_duree_{i}")
                     with colc4:
                         if st.button(f"❌ Supprimer", key=f"conso_del_{i}"):
-                            remove_credit_conso(i)
-                            st.experimental_rerun()
-                    # Update state
+                            indices_a_supprimer_conso.append(i)
+
+                    # Mise à jour des données
                     st.session_state.credits_conso[i]["montant"] = montant
                     st.session_state.credits_conso[i]["taux"] = taux_
                     st.session_state.credits_conso[i]["duree"] = duree_
+
+            # Suppression hors boucle
+            if indices_a_supprimer_conso:
+                for idx in sorted(indices_a_supprimer_conso, reverse=True):
+                    st.session_state.credits_conso.pop(idx)
+                st.experimental_rerun()
 
     with tabs[2]:
         st.header("📊 Résultats & Graphiques")
@@ -195,6 +203,7 @@ else:
     st.markdown("---")
     if st.button("⬅️ Retour à l'accueil", on_click=go_to_start):
         pass
+
 
 
 
