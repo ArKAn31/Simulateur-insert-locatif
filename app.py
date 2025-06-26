@@ -95,6 +95,7 @@ else:
                 add_credit_immo()
 
             indices_a_supprimer_immo = []
+            needs_rerun_immo = False
             for i, credit in enumerate(st.session_state.credits_immo):
                 with st.expander(f"Crédit immobilier #{i+1}", expanded=True):
                     colm1, colm2, colm3, colm4 = st.columns([2, 2, 2, 1])
@@ -107,14 +108,14 @@ else:
                     with colm4:
                         if st.button(f"❌ Supprimer", key=f"immo_del_{i}"):
                             indices_a_supprimer_immo.append(i)
+                            needs_rerun_immo = True
 
                     # Mise à jour des données
                     st.session_state.credits_immo[i]["montant"] = montant
                     st.session_state.credits_immo[i]["taux"] = taux_
                     st.session_state.credits_immo[i]["duree"] = duree_
 
-            # Suppression hors boucle
-            if indices_a_supprimer_immo:
+            if needs_rerun_immo:
                 for idx in sorted(indices_a_supprimer_immo, reverse=True):
                     st.session_state.credits_immo.pop(idx)
                 st.experimental_rerun()
@@ -127,6 +128,7 @@ else:
                 add_credit_conso()
 
             indices_a_supprimer_conso = []
+            needs_rerun_conso = False
             for i, credit in enumerate(st.session_state.credits_conso):
                 with st.expander(f"Crédit conso #{i+1}", expanded=True):
                     colc1, colc2, colc3, colc4 = st.columns([2, 2, 2, 1])
@@ -139,14 +141,14 @@ else:
                     with colc4:
                         if st.button(f"❌ Supprimer", key=f"conso_del_{i}"):
                             indices_a_supprimer_conso.append(i)
+                            needs_rerun_conso = True
 
                     # Mise à jour des données
                     st.session_state.credits_conso[i]["montant"] = montant
                     st.session_state.credits_conso[i]["taux"] = taux_
                     st.session_state.credits_conso[i]["duree"] = duree_
 
-            # Suppression hors boucle
-            if indices_a_supprimer_conso:
+            if needs_rerun_conso:
                 for idx in sorted(indices_a_supprimer_conso, reverse=True):
                     st.session_state.credits_conso.pop(idx)
                 st.experimental_rerun()
@@ -203,7 +205,6 @@ else:
     st.markdown("---")
     if st.button("⬅️ Retour à l'accueil", on_click=go_to_start):
         pass
-
 
 
 
