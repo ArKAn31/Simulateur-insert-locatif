@@ -37,6 +37,15 @@ def go_to_start():
     st.session_state.credits_immo = []
     st.session_state.credits_conso = []
 
+# --- Fonctions suppression ---
+def supprimer_credit_immo(index):
+    st.session_state.credits_immo.pop(index)
+    st.experimental_rerun()
+
+def supprimer_credit_conso(index):
+    st.session_state.credits_conso.pop(index)
+    st.experimental_rerun()
+
 # --- Setup page ---
 st.set_page_config(page_title="Simulateur Achat Locatif", page_icon="🏠", layout="wide")
 init_session_state()
@@ -94,8 +103,6 @@ else:
             if st.button("➕ Ajouter un crédit immobilier"):
                 add_credit_immo()
 
-            indices_a_supprimer_immo = []
-            needs_rerun_immo = False
             for i, credit in enumerate(st.session_state.credits_immo):
                 with st.expander(f"Crédit immobilier #{i+1}", expanded=True):
                     colm1, colm2, colm3, colm4 = st.columns([2, 2, 2, 1])
@@ -107,18 +114,12 @@ else:
                         duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}", min_value=1, max_value=40, value=credit["duree"], key=f"immo_duree_{i}")
                     with colm4:
                         if st.button(f"❌ Supprimer", key=f"immo_del_{i}"):
-                            indices_a_supprimer_immo.append(i)
-                            needs_rerun_immo = True
+                            supprimer_credit_immo(i)
 
                     # Mise à jour des données
                     st.session_state.credits_immo[i]["montant"] = montant
                     st.session_state.credits_immo[i]["taux"] = taux_
                     st.session_state.credits_immo[i]["duree"] = duree_
-
-            if needs_rerun_immo:
-                for idx in sorted(indices_a_supprimer_immo, reverse=True):
-                    st.session_state.credits_immo.pop(idx)
-                st.experimental_rerun()
 
         # CONSO
         st.subheader("Crédits à la consommation")
@@ -127,8 +128,6 @@ else:
             if st.button("➕ Ajouter un crédit conso"):
                 add_credit_conso()
 
-            indices_a_supprimer_conso = []
-            needs_rerun_conso = False
             for i, credit in enumerate(st.session_state.credits_conso):
                 with st.expander(f"Crédit conso #{i+1}", expanded=True):
                     colc1, colc2, colc3, colc4 = st.columns([2, 2, 2, 1])
@@ -140,18 +139,12 @@ else:
                         duree_ = st.number_input(f"Durée restante (années) crédit conso #{i+1}", min_value=1, max_value=20, value=credit["duree"], key=f"conso_duree_{i}")
                     with colc4:
                         if st.button(f"❌ Supprimer", key=f"conso_del_{i}"):
-                            indices_a_supprimer_conso.append(i)
-                            needs_rerun_conso = True
+                            supprimer_credit_conso(i)
 
                     # Mise à jour des données
                     st.session_state.credits_conso[i]["montant"] = montant
                     st.session_state.credits_conso[i]["taux"] = taux_
                     st.session_state.credits_conso[i]["duree"] = duree_
-
-            if needs_rerun_conso:
-                for idx in sorted(indices_a_supprimer_conso, reverse=True):
-                    st.session_state.credits_conso.pop(idx)
-                st.experimental_rerun()
 
     with tabs[2]:
         st.header("📊 Résultats & Graphiques")
