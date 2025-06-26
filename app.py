@@ -4,8 +4,6 @@ import plotly.graph_objects as go
 
 # --- Fonctions de calcul ---
 def mensualite_credit(montant, taux_annuel, duree_annees):
-    if duree_annees == 0:
-        return 0
     taux_mensuel = taux_annuel / 12
     n = duree_annees * 12
     if taux_mensuel == 0:
@@ -13,152 +11,171 @@ def mensualite_credit(montant, taux_annuel, duree_annees):
     mensualite = montant * (taux_mensuel * (1 + taux_mensuel)**n) / ((1 + taux_mensuel)**n - 1)
     return mensualite
 
-def montant_max_empruntable(revenu_mensuel, taux_annuel, duree_annees, apport, taux_assurance_annuel=0.004):
-    mensualite_max = revenu_mensuel * 0.33
-    low, high = 0, 1_000_000
-    precision = 1
+def calc_assurance(montant, taux_assurance_annuel=0.004):
+    return (montant * taux_assurance_annuel) / 12
 
-    while high - low > precision:
-        mid = (low + high) / 2
-        assurance = (mid * taux_assurance_annuel) / 12
-        mensualite = mensualite_credit(mid, taux_annuel, duree_annees) + assurance
-        if mensualite > mensualite_max:
-            high = mid
-        else:
-            low = mid
+# --- Session State Helpers ---
+def init_session_state():
+    if "credits_immo" not in st.session_state:
+        st.session_state.credits_immo = []
+    if "credits_conso" not in st.session_state:
+        st.session_state.credits_conso = []
 
-    montant_emprunte = low
-    prix_total = montant_emprunte + apport
-    return round(montant_emprunte), round(prix_total)
+def add_credit_immo():
+    st.session_state.credits_immo.append({"montant": 0, "taux": 0.03, "duree": 10})
 
-# --- Config Streamlit ---
-st.set_page_config(page_title="Simulateur Immo Avancé", page_icon="🏠", layout="wide")
+def add_credit_conso():
+    st.session_state.credits_conso.append({"montant": 0, "taux": 0.05, "duree": 5})
+
+def remove_credit_immo(idx):
+    st.session_state.credits_immo.pop(idx)
+
+def remove_credit_conso(idx):
+    st.session_state.credits_conso.pop(idx)
+
+# --- Setup page ---
+st.set_page_config(page_title="Simulateur Achat Locatif", page_icon="🏠", layout="wide")
 st.title("🏠 Simulateur Achat Locatif Avancé")
-st.markdown("Calcule si ton achat immobilier locatif peut être autofinancé, en tenant compte de tes crédits actuels.")
 
-# --- Inputs principaux ---
-st.header("📥 Paramètres principaux")
+init_session_state()
 
-col1, col2 = st.columns(2)
-with col1:
-    prix = st.number_input("💰 Prix du logement (€)", min_value=0, value=250000, step=1000)
-    apport = st.slider("💼 Apport personnel (€)", min_value=0, max_value=prix, value=20000, step=1000)
-with col2:
-    revenu = st.number_input("👤 Revenu mensuel net (€)", min_value=0, value=3000, step=100)
-    taux = st.slider("📈 Taux d’intérêt nouveau prêt (%)", min_value=1.0, max_value=10.0, value=4.0, step=0.1) / 100
-    duree = st.slider("⏳ Durée du nouveau prêt (années)", min_value=5, max_value=30, value=25)
+# Onglets
+tabs = st.tabs(["Paramètres généraux", "Crédits existants", "Résultats & Graphiques"])
 
-# --- Onglets crédits existants ---
-st.header("📊 Crédits existants")
+with tabs[0]:
+    st.header("📥 Paramètres généraux")
 
-tab_immo, tab_conso = st.tabs(["Crédits immobiliers existants", "Crédits conso existants"])
+    col1, col2 = st.columns(2)
+    with col1:
+        prix = st.number_input("💰 Prix du logement (€)", min_value=0, value=250000, step=1000)
+        apport = st.slider("💼 Apport personnel (€)", min_value=0, max_value=prix, value=20000, step=1000)
+        apport_pct = (apport / prix * 100) if prix > 0 else 0
+        st.markdown(f"**Apport représente {apport_pct:.1f}% du prix.**")
 
-def gerer_credits(type_credit):
-    st.write(f"### {type_credit.capitalize()} existants")
-    a_un_credit = st.checkbox(f"J’ai au moins un crédit {type_credit}", key=f"check_{type_credit}")
-    credits = []
-    if a_un_credit:
-        nb_credits = st.number_input(f"Nombre de crédits {type_credit}", min_value=1, max_value=10, value=1, key=f"nb_{type_credit}")
-        for i in range(nb_credits):
-            st.markdown(f"**Crédit {type_credit} #{i+1}**")
-            montant = st.number_input(f"Montant restant crédit {type_credit} #{i+1} (€)", min_value=0, value=5000*(i+1), step=1000, key=f"montant_{type_credit}_{i}")
-            taux_c = st.slider(f"Taux crédit {type_credit} #{i+1} (%)", 0.0, 10.0, 2.0, 0.1, key=f"taux_{type_credit}_{i}") / 100
-            duree_c = st.slider(f"Durée restante crédit {type_credit} #{i+1} (années)", 0, 30, 10, key=f"duree_{type_credit}_{i}")
-            credits.append({"montant": montant, "taux": taux_c, "duree": duree_c})
-    return credits
+    with col2:
+        revenu = st.number_input("👤 Revenu mensuel net (€)", min_value=0, value=3000, step=100)
+        taux = st.slider("📈 Taux d’intérêt annuel (%)", min_value=0.5, max_value=10.0, value=3.5, step=0.1) / 100
+        duree = st.slider("⏳ Durée du prêt (années)", min_value=5, max_value=30, value=20)
 
-with tab_immo:
-    credits_immo = gerer_credits("immobilier")
-with tab_conso:
-    credits_conso = gerer_credits("conso")
+with tabs[1]:
+    st.header("💳 Crédits existants")
 
-# --- Calcul des mensualités crédits existants ---
-mensualite_immo_tot = sum(mensualite_credit(c["montant"], c["taux"], c["duree"]) for c in credits_immo)
-mensualite_conso_tot = sum(mensualite_credit(c["montant"], c["taux"], c["duree"]) for c in credits_conso)
-mensualites_existantes = mensualite_immo_tot + mensualite_conso_tot
+    # IMMOBILIERS
+    st.subheader("Crédits immobiliers")
+    has_immo = st.checkbox("J’ai un ou plusieurs crédits immobiliers existants", value=len(st.session_state.credits_immo) > 0)
+    if has_immo:
+        if st.button("➕ Ajouter un crédit immobilier"):
+            add_credit_immo()
 
-# --- Calcul nouveau crédit ---
-montant_emprunte = max(prix - apport, 0)
-mensualite_nouveau = mensualite_credit(montant_emprunte, taux, duree)
-assurance = (montant_emprunte * 0.004) / 12
-mensualite_nouveau_totale = mensualite_nouveau + assurance
+        for i, credit in enumerate(st.session_state.credits_immo):
+            with st.expander(f"Crédit immobilier #{i+1}", expanded=True):
+                colm1, colm2, colm3, colm4 = st.columns([2,2,2,1])
+                with colm1:
+                    montant = st.number_input(f"Montant crédit immo #{i+1} (€)", min_value=0, value=credit["montant"], key=f"immo_montant_{i}")
+                with colm2:
+                    taux_ = st.slider(f"Taux (%) crédit immo #{i+1}", min_value=0.0, max_value=10.0, value=credit["taux"]*100, step=0.1, key=f"immo_taux_{i}") / 100
+                with colm3:
+                    duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}", min_value=1, max_value=40, value=credit["duree"], key=f"immo_duree_{i}")
+                with colm4:
+                    if st.button(f"❌ Supprimer", key=f"immo_del_{i}"):
+                        remove_credit_immo(i)
+                        st.experimental_rerun()
+                # Update state
+                st.session_state.credits_immo[i]["montant"] = montant
+                st.session_state.credits_immo[i]["taux"] = taux_
+                st.session_state.credits_immo[i]["duree"] = duree_
 
-# --- Taux d’endettement total ---
-if revenu > 0:
-    taux_endettement_total = (mensualites_existantes + mensualite_nouveau_totale) / revenu
-else:
-    taux_endettement_total = 1  # Forcer si revenu nul
+    # CONSO
+    st.subheader("Crédits à la consommation")
+    has_conso = st.checkbox("J’ai un ou plusieurs crédits à la consommation existants", value=len(st.session_state.credits_conso) > 0)
+    if has_conso:
+        if st.button("➕ Ajouter un crédit conso"):
+            add_credit_conso()
 
-# --- Affichage résultats ---
-st.header("📋 Résultats")
+        for i, credit in enumerate(st.session_state.credits_conso):
+            with st.expander(f"Crédit conso #{i+1}", expanded=True):
+                colc1, colc2, colc3, colc4 = st.columns([2,2,2,1])
+                with colc1:
+                    montant = st.number_input(f"Montant crédit conso #{i+1} (€)", min_value=0, value=credit["montant"], key=f"conso_montant_{i}")
+                with colc2:
+                    taux_ = st.slider(f"Taux (%) crédit conso #{i+1}", min_value=0.0, max_value=15.0, value=credit["taux"]*100, step=0.1, key=f"conso_taux_{i}") / 100
+                with colc3:
+                    duree_ = st.number_input(f"Durée restante (années) crédit conso #{i+1}", min_value=1, max_value=20, value=credit["duree"], key=f"conso_duree_{i}")
+                with colc4:
+                    if st.button(f"❌ Supprimer", key=f"conso_del_{i}"):
+                        remove_credit_conso(i)
+                        st.experimental_rerun()
+                # Update state
+                st.session_state.credits_conso[i]["montant"] = montant
+                st.session_state.credits_conso[i]["taux"] = taux_
+                st.session_state.credits_conso[i]["duree"] = duree_
 
-colA, colB = st.columns(2)
+with tabs[2]:
+    st.header("📊 Résultats & Graphiques")
 
-with colA:
+    # Calcul mensualités crédits existants
+    total_mensualites_immo = sum(
+        mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
+        for c in st.session_state.credits_immo
+    )
+    total_mensualites_conso = sum(
+        mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
+        for c in st.session_state.credits_conso
+    )
+    total_credits_existants = total_mensualites_immo + total_mensualites_conso
+
+    # Nouveau crédit
+    montant_emprunte = max(prix - apport, 0)
+    mensu_nouveau = mensualite_credit(montant_emprunte, taux, duree) if montant_emprunte > 0 else 0
+    assurance_nouveau = calc_assurance(montant_emprunte) if montant_emprunte > 0 else 0
+    mensu_tot_nouveau = mensu_nouveau + assurance_nouveau
+
+    mensu_totale = total_credits_existants + mensu_tot_nouveau
+
+    # Affichage résultats
     st.subheader("💳 Crédits existants")
-    st.write(f"Mensualités totales crédits immobiliers : **{mensualite_immo_tot:.2f} €**")
-    st.write(f"Mensualités totales crédits conso : **{mensualite_conso_tot:.2f} €**")
-    st.write(f"Mensualités totales crédits existants : **{mensualites_existantes:.2f} €**")
+    st.write(f"- Mensualités totales crédits immobiliers : {total_mensualites_immo:.2f} €")
+    st.write(f"- Mensualités totales crédits consommation : {total_mensualites_conso:.2f} €")
+    st.write(f"**→ Mensualités totales crédits existants : {total_credits_existants:.2f} €**")
 
-with colB:
     st.subheader("🏠 Nouveau crédit")
-    st.write(f"Montant emprunté : **{montant_emprunte:,.0f} €**")
-    st.write(f"Mensualité hors assurance : **{mensualite_nouveau:.2f} €**")
-    st.write(f"Assurance (~0.4%/an) : **{assurance:.2f} €**")
-    st.write(f"Mensualité totale nouveau crédit : **{mensualite_nouveau_totale:.2f} €**")
+    st.write(f"- Montant emprunté : {montant_emprunte:.0f} €")
+    st.write(f"- Mensualité hors assurance : {mensu_nouveau:.2f} €")
+    st.write(f"- Assurance (~0.4%/an) : {assurance_nouveau:.2f} €")
+    st.write(f"**→ Mensualité totale nouveau crédit : {mensu_tot_nouveau:.2f} €**")
 
-st.markdown("---")
-st.subheader("📊 Taux d’endettement total")
-st.write(f"Taux d’endettement total (anciens + nouveau crédit) : **{taux_endettement_total*100:.1f}%**")
+    st.subheader("🔢 Total général")
+    st.write(f"**Mensualité totale (existants + nouveau) : {mensu_totale:.2f} €**")
+    pct_revenu = (mensu_totale / revenu * 100) if revenu > 0 else 0
+    st.write(f"**Soit {pct_revenu:.1f}% de votre revenu mensuel net.**")
 
-if revenu == 0:
-    st.warning("⚠️ Veuillez entrer un revenu mensuel pour calculer le taux d’endettement.")
-elif taux_endettement_total > 0.33:
-    st.error("❌ Taux d’endettement trop élevé pour être finançable.")
-else:
-    st.success("✅ Projet finançable (endettement < 33%)")
+    # Graphique 1 : Camembert taux d'endettement
+    part_existants = total_credits_existants
+    part_nouveau = mensu_tot_nouveau
+    part_libre = max(revenu - (part_existants + part_nouveau), 0)
 
-# --- Graphiques ---
+    labels = ["Crédits existants", "Nouveau crédit", "Part libre sur revenu"]
+    values = [part_existants, part_nouveau, part_libre]
+    colors = ["#636EFA", "#EF553B", "#00CC96"]
 
-# Camembert répartition endettement
-libre = max(0, 1 - taux_endettement_total)
-parts = [
-    mensualite_immo_tot / revenu if revenu>0 else 0,
-    mensualite_conso_tot / revenu if revenu>0 else 0,
-    mensualite_nouveau_totale / revenu if revenu>0 else 0,
-    libre
-]
-labels = [
-    "Crédits immobiliers existants",
-    "Crédits conso existants",
-    "Nouveau crédit",
-    "Revenu disponible"
-]
-colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA']
+    fig1 = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.4,
+                                  marker_colors=colors)])
+    fig1.update_layout(title_text="Répartition du taux d'endettement total")
+    st.plotly_chart(fig1, use_container_width=True)
 
-fig_pie = go.Figure(data=[go.Pie(labels=labels, values=parts, hole=0.4, marker_colors=colors)])
-fig_pie.update_layout(title_text="Répartition du taux d'endettement total")
-st.plotly_chart(fig_pie, use_container_width=True)
+    # Graphique 2 : Comparaison mensualités en barres
+    labels_bar = ["Crédits existants", "Nouveau crédit", "Total mensualités"]
+    mensu_total = [part_existants, part_nouveau, part_existants + part_nouveau]
+    revenu_ref = [revenu, revenu, revenu]
 
-# Graphique barres comparatives
-fig_bar = go.Figure(data=[
-    go.Bar(name="Crédits immo existants", x=["Mensualités"], y=[mensualite_immo_tot], marker_color='#636EFA', text=[f"{mensualite_immo_tot:.2f} €"], textposition='auto'),
-    go.Bar(name="Crédits conso existants", x=["Mensualités"], y=[mensualite_conso_tot], marker_color='#EF553B', text=[f"{mensualite_conso_tot:.2f} €"], textposition='auto'),
-    go.Bar(name="Nouveau crédit", x=["Mensualités"], y=[mensualite_nouveau_totale], marker_color='#00CC96', text=[f"{mensualite_nouveau_totale:.2f} €"], textposition='auto'),
-    go.Bar(name="Revenu mensuel", x=["Mensualités"], y=[revenu], marker_color='#AB63FA', text=[f"{revenu:.2f} €"], textposition='auto')
-])
-fig_bar.update_layout(title_text="Comparaison des mensualités et revenu", barmode='group', yaxis_title="Montant (€)")
-st.plotly_chart(fig_bar, use_container_width=True)
+    fig2 = go.Figure()
+    fig2.add_trace(go.Bar(name="Mensualité", x=labels_bar, y=mensu_total, marker_color="#636EFA"))
+    fig2.add_trace(go.Bar(name="Revenu mensuel", x=labels_bar, y=revenu_ref, marker_color="#B6B6B6"))
 
-# --- Capacité d’achat max (optionnel) ---
-st.header("📈 Capacité d’achat maximale")
+    fig2.update_layout(barmode='group', title="Comparaison des mensualités et revenu mensuel",
+                       yaxis_title="Euros (€)")
+    st.plotly_chart(fig2, use_container_width=True)
 
-if revenu > 0:
-    emprunt_max, prix_max = montant_max_empruntable(revenu, taux, duree, apport)
-    st.write(f"Montant empruntable max : **{emprunt_max} €**")
-    st.write(f"Prix d'achat max (avec apport) : **{prix_max} €**")
-else:
-    st.info("Entrez votre revenu pour calculer la capacité d'achat maximale.")
 
 
 
