@@ -34,11 +34,9 @@ with tabs[0]:
 with tabs[1]:
     st.header("💳 Crédits existants")
 
-    # Choix du nombre de crédits
     nb_immo = st.selectbox("Nombre de crédits immobiliers", range(6), index=0)
     nb_conso = st.selectbox("Nombre de crédits conso", range(6), index=0)
 
-    # Crédits immo
     st.subheader("🏠 Crédits immobiliers")
     credits_immo = []
     for i in range(nb_immo):
@@ -46,13 +44,8 @@ with tabs[1]:
             montant = st.number_input(f"Montant restant dû crédit immo #{i+1} (€)", 0, 2_000_000, 100_000, key=f"immo_montant_{i}")
             taux_ = st.slider(f"Taux crédit immo #{i+1} (%)", 0.0, 10.0, 3.0, 0.1, key=f"immo_taux_{i}") / 100
             duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}", 1, 40, 15, key=f"immo_duree_{i}")
-
-            mensu = mensualite_credit(montant, taux_, duree_)
-            st.markdown(f"**Mensualité estimée (hors assurance) :** {mensu:,.0f} €")
-
             credits_immo.append({"montant": montant, "taux": taux_, "duree": duree_})
 
-    # Crédits conso
     st.subheader("💸 Crédits à la consommation")
     credits_conso = []
     for i in range(nb_conso):
@@ -60,17 +53,12 @@ with tabs[1]:
             montant = st.number_input(f"Montant restant dû crédit conso #{i+1} (€)", 0, 500_000, 10_000, key=f"conso_montant_{i}")
             taux_ = st.slider(f"Taux crédit conso #{i+1} (%)", 0.0, 15.0, 5.0, 0.1, key=f"conso_taux_{i}") / 100
             duree_ = st.number_input(f"Durée restante (années) crédit conso #{i+1}", 1, 30, 5, key=f"conso_duree_{i}")
-
-            mensu = mensualite_credit(montant, taux_, duree_)
-            st.markdown(f"**Mensualité estimée (hors assurance) :** {mensu:,.0f} €")
-
             credits_conso.append({"montant": montant, "taux": taux_, "duree": duree_})
 
 # --- Résultats ---
 with tabs[2]:
     st.header("📊 Résultats & Synthèse")
 
-    # --- Calculs ---
     total_mensualites_immo = sum(
         mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
         for c in credits_immo
@@ -89,7 +77,6 @@ with tabs[2]:
     total_mensualites = total_credits_existants + total_nouveau_credit
     endettement = total_mensualites / revenu if revenu > 0 else 0
 
-    # --- Affichage simplifié ---
     st.subheader("🧾 Résumé financier mensuel")
     col1, col2 = st.columns(2)
     with col1:
@@ -107,8 +94,7 @@ with tabs[2]:
         else:
             st.error("🔴 Endettement élevé — risque de refus bancaire")
 
-    # --- Camembert : répartition des revenus ---
-    st.subheader("📈 Répartition de votre revenu mensuel")
+    st.subheader("📈 Répartition des revenus mensuels")
 
     labels = ["Crédits existants", "Nouveau crédit", "Revenu restant"]
     values = [total_credits_existants, total_nouveau_credit, max(revenu - total_mensualites, 0)]
@@ -125,21 +111,13 @@ with tabs[2]:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # ... (après affichage du graphique)
-
     # --- Conclusion crédit max possible ---
     st.subheader("🔎 Conclusion")
-    # Calcul du crédit max possible en fonction d’un endettement max de 35%
     endettement_max = 0.35
     capacité_mensuelle = revenu * endettement_max - total_credits_existants
     if capacité_mensuelle <= 0:
         st.error("❌ Votre capacité d'emprunt est déjà dépassée avec vos crédits existants.")
     else:
-        # Calcul montant max empruntable avec mensualité capacité_mensuelle
-        # On cherche montant_emprunte_max tel que mensualite_credit = capacité_mensuelle - assurance
-        # Ici on fait une estimation simple en inversant la formule (approximation)
-        # On peut faire une recherche binaire pour être plus précis
-
         def montant_max_emprunte(mensualite_cible, taux_annuel, duree_annees):
             taux_mensuel = taux_annuel / 12
             n = duree_annees * 12
@@ -148,23 +126,15 @@ with tabs[2]:
             montant = mensualite_cible * ((1 + taux_mensuel)**n - 1) / (taux_mensuel * (1 + taux_mensuel)**n)
             return montant
 
-        # On enlève l'assurance (qui dépend du montant), donc on ajuste la mensualité cible
-        # On va faire une boucle pour affiner car assurance dépend du montant
-
         mensualite_dispo = capacité_mensuelle
         montant_estime = 0
         for _ in range(10):
             montant_estime = montant_max_emprunte(mensualite_dispo, taux, duree)
             assurance = calc_assurance(montant_estime)
-            mensualite_dispo = capacité_mensuelle + assurance  # on ajoute assurance à la mensualité dispo
+            mensualite_dispo = capacité_mensuelle + assurance
 
         st.info(f"💡 Montant maximal empruntable estimé : {montant_estime:,.0f} €")
         st.info(f"💡 Mensualité correspondante (hors assurance) : {mensualite_credit(montant_estime, taux, duree):,.0f} €")
-        st.info(f"💡 Assurance mensuelle estimée : {calc_assurance(montant_estime):,.0f} €")
-        st.info(f"💡 Endettement total estimé : {(total_credits_existants + mensualite_credit(montant_estime, taux, duree) + calc_assurance(montant_estime)) / revenu * 100:.1f} %")
-
-
-
 
 
 
