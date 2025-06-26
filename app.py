@@ -1,6 +1,8 @@
 
 import streamlit as st
+import plotly.express as px
 import plotly.graph_objects as go
+import pandas as pd
 
 # --- Fonctions de calcul ---
 def mensualite_credit(montant, taux_annuel, duree_annees):
@@ -71,30 +73,14 @@ with tabs[1]:
             with st.expander(f"Crédit immobilier #{i+1}", expanded=True):
                 colm1, colm2, colm3, colm4 = st.columns([2,2,2,1])
                 with colm1:
-                    montant = st.number_input(
-                        f"🏦 Capital restant dû sur ce crédit (€) #{i+1}",
-                        min_value=0,
-                        value=credit["montant"],
-                        key=f"immo_montant_{i}",
-                        help="Montant restant à rembourser sur ce crédit immobilier"
-                    )
+                    montant = st.number_input(f"🏦 Capital restant dû sur ce crédit immo #{i+1} (€)",
+                                              min_value=0, value=credit["montant"], key=f"immo_montant_{i}")
                 with colm2:
-                    taux_ = st.slider(
-                        f"Taux (%) crédit immo #{i+1}",
-                        min_value=0.0,
-                        max_value=10.0,
-                        value=credit["taux"]*100,
-                        step=0.1,
-                        key=f"immo_taux_{i}"
-                    ) / 100
+                    taux_ = st.slider(f"Taux (%) crédit immo #{i+1}", min_value=0.0, max_value=10.0, value=credit["taux"]*100,
+                                      step=0.1, key=f"immo_taux_{i}") / 100
                 with colm3:
-                    duree_ = st.number_input(
-                        f"Durée restante (années) crédit immo #{i+1}",
-                        min_value=1,
-                        max_value=40,
-                        value=credit["duree"],
-                        key=f"immo_duree_{i}"
-                    )
+                    duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}",
+                                             min_value=1, max_value=40, value=credit["duree"], key=f"immo_duree_{i}")
                 with colm4:
                     if st.button(f"❌ Supprimer", key=f"immo_del_{i}"):
                         remove_credit_immo(i)
@@ -115,30 +101,14 @@ with tabs[1]:
             with st.expander(f"Crédit conso #{i+1}", expanded=True):
                 colc1, colc2, colc3, colc4 = st.columns([2,2,2,1])
                 with colc1:
-                    montant = st.number_input(
-                        f"🏦 Capital restant dû sur ce crédit (€) #{i+1}",
-                        min_value=0,
-                        value=credit["montant"],
-                        key=f"conso_montant_{i}",
-                        help="Montant restant à rembourser sur ce crédit à la consommation"
-                    )
+                    montant = st.number_input(f"🏦 Capital restant dû sur ce crédit conso #{i+1} (€)",
+                                              min_value=0, value=credit["montant"], key=f"conso_montant_{i}")
                 with colc2:
-                    taux_ = st.slider(
-                        f"Taux (%) crédit conso #{i+1}",
-                        min_value=0.0,
-                        max_value=15.0,
-                        value=credit["taux"]*100,
-                        step=0.1,
-                        key=f"conso_taux_{i}"
-                    ) / 100
+                    taux_ = st.slider(f"Taux (%) crédit conso #{i+1}", min_value=0.0, max_value=15.0, value=credit["taux"]*100,
+                                      step=0.1, key=f"conso_taux_{i}") / 100
                 with colc3:
-                    duree_ = st.number_input(
-                        f"Durée restante (années) crédit conso #{i+1}",
-                        min_value=1,
-                        max_value=20,
-                        value=credit["duree"],
-                        key=f"conso_duree_{i}"
-                    )
+                    duree_ = st.number_input(f"Durée restante (années) crédit conso #{i+1}",
+                                             min_value=1, max_value=20, value=credit["duree"], key=f"conso_duree_{i}")
                 with colc4:
                     if st.button(f"❌ Supprimer", key=f"conso_del_{i}"):
                         remove_credit_conso(i)
@@ -150,6 +120,7 @@ with tabs[1]:
 
 with tabs[2]:
     st.header("📊 Résultats & Graphiques")
+    st.markdown("---")
 
     # Calcul mensualités crédits existants
     total_mensualites_immo = sum(
@@ -170,52 +141,111 @@ with tabs[2]:
 
     mensu_totale = total_credits_existants + mensu_tot_nouveau
 
-    # --- Affichage résultats structuré et plus clair ---
-    st.markdown("### 💳 Crédits existants")
+    # Mise en forme Résultats
+
+    st.subheader("💳 Crédits existants")
     st.write(f"- Mensualités totales crédits immobiliers : **{total_mensualites_immo:.2f} €**")
     st.write(f"- Mensualités totales crédits consommation : **{total_mensualites_conso:.2f} €**")
-    st.write(f"**→ Mensualités totales crédits existants : {total_credits_existants:.2f} €**")
-
+    st.markdown(f"➡️ **Mensualités totales crédits existants : {total_credits_existants:.2f} €**")
     st.markdown("---")
-    st.markdown("### 🏠 Nouveau crédit")
-    st.write(f"- Montant emprunté : **{montant_emprunte:.0f} €**")
+
+    st.subheader("🏠 Nouveau crédit")
+    st.write(f"- Montant emprunté : **{montant_emprunte:,.0f} €**")
     st.write(f"- Mensualité hors assurance : **{mensu_nouveau:.2f} €**")
     st.write(f"- Assurance (~0.4%/an) : **{assurance_nouveau:.2f} €**")
-    st.write(f"**→ Mensualité totale nouveau crédit : {mensu_tot_nouveau:.2f} €**")
-
+    st.markdown(f"➡️ **Mensualité totale nouveau crédit : {mensu_tot_nouveau:.2f} €**")
     st.markdown("---")
-    st.markdown("### 🔢 Total général")
-    st.write(f"**Mensualité totale (existants + nouveau) : {mensu_totale:.2f} €**")
-    pct_revenu = (mensu_totale / revenu * 100) if revenu > 0 else 0
-    st.write(f"**Soit {pct_revenu:.1f}% de votre revenu mensuel net.**")
 
-    # Graphique 1 : Camembert taux d'endettement
+    st.subheader("🔢 Total général")
+    st.markdown(f"### Mensualité totale (existants + nouveau) : **{mensu_totale:.2f} €**")
+    pct_revenu = (mensu_totale / revenu * 100) if revenu > 0 else 0
+    st.markdown(f"### Soit **{pct_revenu:.1f}%** de votre revenu mensuel net.")
+    st.markdown("---")
+
+    # 1) Camembert annulaire taux d'endettement (plus doux, annotations)
     part_existants = total_credits_existants
     part_nouveau = mensu_tot_nouveau
     part_libre = max(revenu - (part_existants + part_nouveau), 0)
 
     labels = ["Crédits existants", "Nouveau crédit", "Part libre sur revenu"]
     values = [part_existants, part_nouveau, part_libre]
-    colors = ["#636EFA", "#EF553B", "#00CC96"]
+    colors = ["#4E79A7", "#F28E2B", "#59A14F"]
 
-    fig1 = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.4,
-                                  marker_colors=colors)])
-    fig1.update_layout(title_text="Répartition du taux d'endettement total",
-                       title_x=0.5,
-                       margin=dict(t=50,b=0,l=0,r=0))
+    fig1 = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.55,
+                                  marker_colors=colors,
+                                  textinfo='label+percent',
+                                  insidetextorientation='radial',
+                                  sort=False)])
+    fig1.update_layout(
+        title_text="Répartition du taux d'endettement total",
+        margin=dict(t=40, b=40, l=40, r=40),
+        showlegend=False,
+        font=dict(size=14)
+    )
     st.plotly_chart(fig1, use_container_width=True)
 
-    # Graphique 2 : Comparaison mensualités en barres
+    # 2) Graphique évolution sur durée du nouveau crédit (mensualité et capital restant dû)
+    if montant_emprunte > 0:
+        n_mois = duree * 12
+        taux_mensuel = taux / 12
+        mensualite = mensualite_credit(montant_emprunte, taux, duree)  # hors assurance
+
+        # Calcul capital restant dû mois par mois
+        capitals = []
+        capital_restant = montant_emprunte
+        for m in range(1, n_mois + 1):
+            interet = capital_restant * taux_mensuel
+            principal = mensualite - interet
+            capital_restant = max(capital_restant - principal, 0)
+            capitals.append(capital_restant)
+
+        df = pd.DataFrame({
+            "Mois": list(range(1, n_mois + 1)),
+            "Capital restant dû (€)": capitals,
+            "Mensualité hors assurance (€)": [mensualite] * n_mois
+        })
+
+        fig2 = go.Figure()
+        fig2.add_trace(go.Scatter(x=df["Mois"], y=df["Capital restant dû (€)"],
+                                  mode='lines', name="Capital restant dû",
+                                  line=dict(color="#4E79A7", width=3)))
+        fig2.add_trace(go.Scatter(x=df["Mois"], y=df["Mensualité hors assurance (€)"],
+                                  mode='lines', name="Mensualité hors assurance",
+                                  line=dict(color="#F28E2B", width=3, dash="dash")))
+
+        fig2.update_layout(
+            title="Évolution du capital restant dû et mensualité",
+            xaxis_title="Mois",
+            yaxis_title="Euros (€)",
+            legend=dict(y=0.95, x=0.01),
+            margin=dict(t=40, b=40, l=60, r=20),
+            font=dict(size=13)
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+    # 3) Bar chart horizontal: comparaison mensualités et revenu
     labels_bar = ["Crédits existants", "Nouveau crédit", "Total mensualités"]
     mensu_total = [part_existants, part_nouveau, part_existants + part_nouveau]
     revenu_ref = [revenu, revenu, revenu]
 
-    fig2 = go.Figure()
-    fig2.add_trace(go.Bar(name="Mensualités (€)", x=labels_bar, y=mensu_total, marker_color="#EF553B"))
-    fig2.add_trace(go.Bar(name="Revenu mensuel (€)", x=labels_bar, y=revenu_ref, marker_color="#636EFA"))
-    fig2.update_layout(barmode='group', title_text="Comparaison mensualités vs revenu",
-                       title_x=0.5, yaxis_title="€")
-    st.plotly_chart(fig2, use_container_width=True)
+    fig3 = go.Figure()
+    fig3.add_trace(go.Bar(y=labels_bar, x=mensu_total, name="Mensualité",
+                          orientation='h', marker_color="#4E79A7", text=[f"{v:.0f} €" for v in mensu_total],
+                          textposition='inside'))
+    fig3.add_trace(go.Bar(y=labels_bar, x=revenu_ref, name="Revenu mensuel",
+                          orientation='h', marker_color="#B6B6B6", opacity=0.6,
+                          text=[f"{v:.0f} €" for v in revenu_ref], textposition='outside'))
+
+    fig3.update_layout(
+        barmode='overlay',
+        title="Comparaison des mensualités et revenu mensuel",
+        xaxis_title="Euros (€)",
+        yaxis=dict(autorange="reversed"),
+        margin=dict(t=40, b=40, l=120, r=40),
+        font=dict(size=13)
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+
 
 
 
