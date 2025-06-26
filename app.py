@@ -58,6 +58,10 @@ with tabs[1]:
             duree_ = st.number_input(f"Durée restante (années) crédit conso #{i+1}", 1, 30, 5, key=f"conso_duree_{i}")
             credits_conso.append({"montant": montant, "taux": taux_, "duree": duree_})
 
+    # Sauvegarde des crédits dans session_state pour l’onglet Résultats
+    st.session_state.credits_immo = credits_immo
+    st.session_state.credits_conso = credits_conso
+
 # --- Résultats ---
 with tabs[2]:
     st.header("📊 Résultats & Synthèse")
@@ -65,11 +69,11 @@ with tabs[2]:
     # --- Calculs ---
     total_mensualites_immo = sum(
         mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
-        for c in st.session_state.credits_immo
+        for c in st.session_state.get("credits_immo", [])
     )
     total_mensualites_conso = sum(
         mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
-        for c in st.session_state.credits_conso
+        for c in st.session_state.get("credits_conso", [])
     )
     total_credits_existants = total_mensualites_immo + total_mensualites_conso
 
@@ -116,6 +120,7 @@ with tabs[2]:
         showlegend=True
     )
     st.plotly_chart(fig, use_container_width=True)
+
 
 
 
