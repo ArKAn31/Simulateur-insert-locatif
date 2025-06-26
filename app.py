@@ -125,6 +125,45 @@ with tabs[2]:
     )
     st.plotly_chart(fig, use_container_width=True)
 
+    # ... (après affichage du graphique)
+
+    # --- Conclusion crédit max possible ---
+    st.subheader("🔎 Conclusion")
+    # Calcul du crédit max possible en fonction d’un endettement max de 35%
+    endettement_max = 0.35
+    capacité_mensuelle = revenu * endettement_max - total_credits_existants
+    if capacité_mensuelle <= 0:
+        st.error("❌ Votre capacité d'emprunt est déjà dépassée avec vos crédits existants.")
+    else:
+        # Calcul montant max empruntable avec mensualité capacité_mensuelle
+        # On cherche montant_emprunte_max tel que mensualite_credit = capacité_mensuelle - assurance
+        # Ici on fait une estimation simple en inversant la formule (approximation)
+        # On peut faire une recherche binaire pour être plus précis
+
+        def montant_max_emprunte(mensualite_cible, taux_annuel, duree_annees):
+            taux_mensuel = taux_annuel / 12
+            n = duree_annees * 12
+            if taux_mensuel == 0:
+                return mensualite_cible * n
+            montant = mensualite_cible * ((1 + taux_mensuel)**n - 1) / (taux_mensuel * (1 + taux_mensuel)**n)
+            return montant
+
+        # On enlève l'assurance (qui dépend du montant), donc on ajuste la mensualité cible
+        # On va faire une boucle pour affiner car assurance dépend du montant
+
+        mensualite_dispo = capacité_mensuelle
+        montant_estime = 0
+        for _ in range(10):
+            montant_estime = montant_max_emprunte(mensualite_dispo, taux, duree)
+            assurance = calc_assurance(montant_estime)
+            mensualite_dispo = capacité_mensuelle + assurance  # on ajoute assurance à la mensualité dispo
+
+        st.info(f"💡 Montant maximal empruntable estimé : {montant_estime:,.0f} €")
+        st.info(f"💡 Mensualité correspondante (hors assurance) : {mensualite_credit(montant_estime, taux, duree):,.0f} €")
+        st.info(f"💡 Assurance mensuelle estimée : {calc_assurance(montant_estime):,.0f} €")
+        st.info(f"💡 Endettement total estimé : {(total_credits_existants + mensualite_credit(montant_estime, taux, duree) + calc_assurance(montant_estime)) / revenu * 100:.1f} %")
+
+
 
 
 
