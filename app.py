@@ -25,10 +25,12 @@ with tabs[0]:
     with col1:
         prix = st.number_input("Prix du logement (€)", 0, 2_000_000, 250_000, step=1000)
         apport = st.slider("Apport personnel (€)", 0, prix, 20_000, step=1000)
+        loyer_mensuel = st.number_input("Loyer mensuel attendu (€)", 0, 20_000, 1000, step=50)
     with col2:
         revenu = st.number_input("Revenu mensuel (€)", 0, 100_000, 3000, step=100)
         taux = st.slider("Taux d’intérêt annuel (%)", 0.5, 10.0, 3.5, step=0.1) / 100
         duree = st.slider("Durée du prêt (années)", 5, 30, 20)
+        charges_mensuelles = st.number_input("Charges mensuelles (taxes, entretien...) (€)", 0, 10_000, 200, step=50)
 
 # --- Crédits existants ---
 with tabs[1]:
@@ -37,7 +39,6 @@ with tabs[1]:
     nb_immo = st.selectbox("Nombre de crédits immobiliers", range(6), index=0)
     nb_conso = st.selectbox("Nombre de crédits conso", range(6), index=0)
 
-    st.subheader("🏠 Crédits immobiliers")
     credits_immo = []
     for i in range(nb_immo):
         with st.expander(f"Crédit immo #{i+1}", expanded=True):
@@ -46,7 +47,6 @@ with tabs[1]:
             duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}", 1, 40, 15, key=f"immo_duree_{i}")
             credits_immo.append({"montant": montant, "taux": taux_, "duree": duree_})
 
-    st.subheader("💸 Crédits à la consommation")
     credits_conso = []
     for i in range(nb_conso):
         with st.expander(f"Crédit conso #{i+1}", expanded=True):
@@ -77,12 +77,18 @@ with tabs[2]:
     total_mensualites = total_credits_existants + total_nouveau_credit
     endettement = total_mensualites / revenu if revenu > 0 else 0
 
+    # Calcul du cashflow (loyer - charges - mensualités)
+    cashflow = loyer_mensuel - charges_mensuelles - total_mensualites
+
     st.subheader("🧾 Résumé financier mensuel")
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"- **💳 Crédits existants :** {total_credits_existants:,.0f} €")
         st.markdown(f"- **🏠 Nouveau crédit :** {total_nouveau_credit:,.0f} €")
         st.markdown(f"- **🧮 Total mensualités :** {total_mensualites:,.0f} €")
+        st.markdown(f"- **🏢 Loyer mensuel attendu :** {loyer_mensuel:,.0f} €")
+        st.markdown(f"- **🏷️ Charges mensuelles :** {charges_mensuelles:,.0f} €")
+        st.markdown(f"- **💸 Cashflow mensuel :** {cashflow:,.0f} €")
     with col2:
         st.markdown(f"- **💰 Revenu mensuel :** {revenu:,.0f} €")
         st.markdown(f"- **📉 Taux d’endettement :** {endettement*100:.1f} %")
@@ -94,47 +100,27 @@ with tabs[2]:
         else:
             st.error("🔴 Endettement élevé — risque de refus bancaire")
 
-    st.subheader("📈 Répartition des revenus mensuels")
+        if cashflow > 0:
+            st.success("🟢 Cashflow positif — votre projet est rentable chaque mois")
+        elif cashflow == 0:
+            st.info("🟡 Cashflow neutre — ni perte ni gain chaque mois")
+        else:
+            st.error("🔴 Cashflow négatif — attention, le projet génère un déficit mensuel")
 
-    labels = ["Crédits existants", "Nouveau crédit", "Revenu restant"]
-    values = [total_credits_existants, total_nouveau_credit, max(revenu - total_mensualites, 0)]
+    # Graphique camembert pour répartition du revenu après mensualités
+    st.subheader("📈 Répartition de vos flux mensuels")
+    labels = ["Crédits existants", "Nouveau crédit", "Charges", "Loyer", "Revenu restant"]
+    values = [total_mensualites_immo, mensu_nouveau, charges_mensuelles, loyer_mensuel, max(revenu - total_mensualites - charges_mensuelles, 0)]
 
     fig = go.Figure(go.Pie(
         labels=labels,
         values=values,
         hole=0.4,
-        marker_colors=["#636EFA", "#EF553B", "#00CC96"]
+        marker_colors=["#636EFA", "#EF553B", "#FFA500", "#00CC96", "#AB63FA"]
     ))
-    fig.update_layout(
-        title="Répartition de votre revenu mensuel",
-        showlegend=True
-    )
+    fig.update_layout(title="Répartition mensuelle des flux", showlegend=True)
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- Conclusion crédit max possible ---
-    st.subheader("🔎 Conclusion")
-    endettement_max = 0.35
-    capacité_mensuelle = revenu * endettement_max - total_credits_existants
-    if capacité_mensuelle <= 0:
-        st.error("❌ Votre capacité d'emprunt est déjà dépassée avec vos crédits existants.")
-    else:
-        def montant_max_emprunte(mensualite_cible, taux_annuel, duree_annees):
-            taux_mensuel = taux_annuel / 12
-            n = duree_annees * 12
-            if taux_mensuel == 0:
-                return mensualite_cible * n
-            montant = mensualite_cible * ((1 + taux_mensuel)**n - 1) / (taux_mensuel * (1 + taux_mensuel)**n)
-            return montant
-
-        mensualite_dispo = capacité_mensuelle
-        montant_estime = 0
-        for _ in range(10):
-            montant_estime = montant_max_emprunte(mensualite_dispo, taux, duree)
-            assurance = calc_assurance(montant_estime)
-            mensualite_dispo = capacité_mensuelle + assurance
-
-        st.info(f"💡 Montant maximal empruntable estimé : {montant_estime:,.0f} €")
-        st.info(f"💡 Mensualité correspondante (hors assurance) : {mensualite_credit(montant_estime, taux, duree):,.0f} €")
 
 
 
