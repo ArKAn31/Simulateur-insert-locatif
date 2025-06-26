@@ -71,11 +71,30 @@ with tabs[1]:
             with st.expander(f"Crédit immobilier #{i+1}", expanded=True):
                 colm1, colm2, colm3, colm4 = st.columns([2,2,2,1])
                 with colm1:
-                    montant = st.number_input(f"Montant crédit immo #{i+1} (€)", min_value=0, value=credit["montant"], key=f"immo_montant_{i}")
+                    montant = st.number_input(
+                        f"🏦 Capital restant dû sur ce crédit (€) #{i+1}",
+                        min_value=0,
+                        value=credit["montant"],
+                        key=f"immo_montant_{i}",
+                        help="Montant restant à rembourser sur ce crédit immobilier"
+                    )
                 with colm2:
-                    taux_ = st.slider(f"Taux (%) crédit immo #{i+1}", min_value=0.0, max_value=10.0, value=credit["taux"]*100, step=0.1, key=f"immo_taux_{i}") / 100
+                    taux_ = st.slider(
+                        f"Taux (%) crédit immo #{i+1}",
+                        min_value=0.0,
+                        max_value=10.0,
+                        value=credit["taux"]*100,
+                        step=0.1,
+                        key=f"immo_taux_{i}"
+                    ) / 100
                 with colm3:
-                    duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}", min_value=1, max_value=40, value=credit["duree"], key=f"immo_duree_{i}")
+                    duree_ = st.number_input(
+                        f"Durée restante (années) crédit immo #{i+1}",
+                        min_value=1,
+                        max_value=40,
+                        value=credit["duree"],
+                        key=f"immo_duree_{i}"
+                    )
                 with colm4:
                     if st.button(f"❌ Supprimer", key=f"immo_del_{i}"):
                         remove_credit_immo(i)
@@ -96,11 +115,30 @@ with tabs[1]:
             with st.expander(f"Crédit conso #{i+1}", expanded=True):
                 colc1, colc2, colc3, colc4 = st.columns([2,2,2,1])
                 with colc1:
-                    montant = st.number_input(f"Montant crédit conso #{i+1} (€)", min_value=0, value=credit["montant"], key=f"conso_montant_{i}")
+                    montant = st.number_input(
+                        f"🏦 Capital restant dû sur ce crédit (€) #{i+1}",
+                        min_value=0,
+                        value=credit["montant"],
+                        key=f"conso_montant_{i}",
+                        help="Montant restant à rembourser sur ce crédit à la consommation"
+                    )
                 with colc2:
-                    taux_ = st.slider(f"Taux (%) crédit conso #{i+1}", min_value=0.0, max_value=15.0, value=credit["taux"]*100, step=0.1, key=f"conso_taux_{i}") / 100
+                    taux_ = st.slider(
+                        f"Taux (%) crédit conso #{i+1}",
+                        min_value=0.0,
+                        max_value=15.0,
+                        value=credit["taux"]*100,
+                        step=0.1,
+                        key=f"conso_taux_{i}"
+                    ) / 100
                 with colc3:
-                    duree_ = st.number_input(f"Durée restante (années) crédit conso #{i+1}", min_value=1, max_value=20, value=credit["duree"], key=f"conso_duree_{i}")
+                    duree_ = st.number_input(
+                        f"Durée restante (années) crédit conso #{i+1}",
+                        min_value=1,
+                        max_value=20,
+                        value=credit["duree"],
+                        key=f"conso_duree_{i}"
+                    )
                 with colc4:
                     if st.button(f"❌ Supprimer", key=f"conso_del_{i}"):
                         remove_credit_conso(i)
@@ -132,19 +170,21 @@ with tabs[2]:
 
     mensu_totale = total_credits_existants + mensu_tot_nouveau
 
-    # Affichage résultats
-    st.subheader("💳 Crédits existants")
-    st.write(f"- Mensualités totales crédits immobiliers : {total_mensualites_immo:.2f} €")
-    st.write(f"- Mensualités totales crédits consommation : {total_mensualites_conso:.2f} €")
+    # --- Affichage résultats structuré et plus clair ---
+    st.markdown("### 💳 Crédits existants")
+    st.write(f"- Mensualités totales crédits immobiliers : **{total_mensualites_immo:.2f} €**")
+    st.write(f"- Mensualités totales crédits consommation : **{total_mensualites_conso:.2f} €**")
     st.write(f"**→ Mensualités totales crédits existants : {total_credits_existants:.2f} €**")
 
-    st.subheader("🏠 Nouveau crédit")
-    st.write(f"- Montant emprunté : {montant_emprunte:.0f} €")
-    st.write(f"- Mensualité hors assurance : {mensu_nouveau:.2f} €")
-    st.write(f"- Assurance (~0.4%/an) : {assurance_nouveau:.2f} €")
+    st.markdown("---")
+    st.markdown("### 🏠 Nouveau crédit")
+    st.write(f"- Montant emprunté : **{montant_emprunte:.0f} €**")
+    st.write(f"- Mensualité hors assurance : **{mensu_nouveau:.2f} €**")
+    st.write(f"- Assurance (~0.4%/an) : **{assurance_nouveau:.2f} €**")
     st.write(f"**→ Mensualité totale nouveau crédit : {mensu_tot_nouveau:.2f} €**")
 
-    st.subheader("🔢 Total général")
+    st.markdown("---")
+    st.markdown("### 🔢 Total général")
     st.write(f"**Mensualité totale (existants + nouveau) : {mensu_totale:.2f} €**")
     pct_revenu = (mensu_totale / revenu * 100) if revenu > 0 else 0
     st.write(f"**Soit {pct_revenu:.1f}% de votre revenu mensuel net.**")
@@ -160,7 +200,9 @@ with tabs[2]:
 
     fig1 = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.4,
                                   marker_colors=colors)])
-    fig1.update_layout(title_text="Répartition du taux d'endettement total")
+    fig1.update_layout(title_text="Répartition du taux d'endettement total",
+                       title_x=0.5,
+                       margin=dict(t=50,b=0,l=0,r=0))
     st.plotly_chart(fig1, use_container_width=True)
 
     # Graphique 2 : Comparaison mensualités en barres
@@ -169,11 +211,10 @@ with tabs[2]:
     revenu_ref = [revenu, revenu, revenu]
 
     fig2 = go.Figure()
-    fig2.add_trace(go.Bar(name="Mensualité", x=labels_bar, y=mensu_total, marker_color="#636EFA"))
-    fig2.add_trace(go.Bar(name="Revenu mensuel", x=labels_bar, y=revenu_ref, marker_color="#B6B6B6"))
-
-    fig2.update_layout(barmode='group', title="Comparaison des mensualités et revenu mensuel",
-                       yaxis_title="Euros (€)")
+    fig2.add_trace(go.Bar(name="Mensualités (€)", x=labels_bar, y=mensu_total, marker_color="#EF553B"))
+    fig2.add_trace(go.Bar(name="Revenu mensuel (€)", x=labels_bar, y=revenu_ref, marker_color="#636EFA"))
+    fig2.update_layout(barmode='group', title_text="Comparaison mensualités vs revenu",
+                       title_x=0.5, yaxis_title="€")
     st.plotly_chart(fig2, use_container_width=True)
 
 
