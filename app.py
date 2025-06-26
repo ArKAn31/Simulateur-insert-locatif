@@ -18,8 +18,8 @@ def calc_assurance(montant, taux_assurance_annuel=0.004):
 
 # --- Initialisation de l'état ---
 def init_state():
-    if "started" not in st.session_state:
-        st.session_state.started = False
+    if "page" not in st.session_state:
+        st.session_state.page = "start"  # start ou app
     if "prix" not in st.session_state:
         st.session_state.prix = 250000
     if "apport" not in st.session_state:
@@ -43,7 +43,7 @@ def init_state():
 
 # --- Reset ---
 def reset_all():
-    st.session_state.started = False
+    st.session_state.page = "start"
     st.session_state.prix = 250000
     st.session_state.apport = 20000
     st.session_state.apport_slider = 20000
@@ -63,61 +63,52 @@ def add_credit_conso():
     st.session_state.credits_conso.append({"montant": 0, "taux": 0.05, "duree": 5})
 
 # --- Interface ---
+
 st.set_page_config(page_title="Simulateur Achat Locatif", page_icon="🏠", layout="wide")
-st.title("🏠 Simulateur Achat Locatif Avancé")
 
 init_state()
 
-if not st.session_state.started:
-    st.info("Remplissez les informations principales puis cliquez sur ▶️ Démarrer la simulation")
+if st.session_state.page == "start":
+    st.markdown("<h1 style='text-align:center;'>🏠 Bienvenue sur le Simulateur Achat Locatif</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>Cliquez sur le bouton ci-dessous pour commencer votre simulation.</p>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+    if st.button("▶️ Démarrer la simulation", key="start_button"):
+        st.session_state.page = "app"
+        st.experimental_rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# -- Paramètres principaux (bloqués si simulation démarrée)
-col1, col2 = st.columns(2)
+elif st.session_state.page == "app":
 
-with col1:
-    prix = st.number_input("💰 Prix du logement (€)", min_value=0, value=st.session_state.prix, step=1000, disabled=st.session_state.started)
-    apport_pct_list = [10, 15, 20, 25]
-    st.markdown("### Apport personnel")
-    pct_cols = st.columns(len(apport_pct_list))
-    for idx, pct in enumerate(apport_pct_list):
-        if pct_cols[idx].button(f"{pct}%", disabled=st.session_state.started):
-            apport_calc = int(prix * pct / 100)
-            st.session_state.apport = apport_calc
-            st.session_state.apport_slider = apport_calc
-    apport = st.slider("Apport libre (€)", min_value=0, max_value=prix, value=st.session_state.apport_slider, step=500, disabled=st.session_state.started, key="apport_slider")
-    st.session_state.apport = apport
-    apport_pct = (apport / prix * 100) if prix > 0 else 0
-    st.markdown(f"**Apport sélectionné : {apport:,} € ({apport_pct:.1f}%)**")
+    st.title("🏠 Simulateur Achat Locatif")
 
-with col2:
-    revenu = st.number_input("👤 Revenu mensuel net (€)", min_value=0, value=st.session_state.revenu, step=100, disabled=st.session_state.started)
-    taux = st.slider("📈 Taux d’intérêt annuel (%)", min_value=0.5, max_value=10.0, value=st.session_state.taux * 100, step=0.1, disabled=st.session_state.started) / 100
-    duree = st.slider("⏳ Durée du prêt (années)", min_value=5, max_value=30, value=st.session_state.duree, disabled=st.session_state.started)
+    col1, col2 = st.columns(2)
 
-if not st.session_state.started:
-    if st.button("▶️ Démarrer la simulation"):
-        # Validation basique
-        erreurs = []
-        if prix <= 0:
-            erreurs.append("Le prix doit être supérieur à 0.")
-        if revenu <= 0:
-            erreurs.append("Le revenu doit être supérieur à 0.")
-        if apport > prix:
-            erreurs.append("L'apport ne peut pas être supérieur au prix du bien.")
-        if len(erreurs) > 0:
-            for e in erreurs:
-                st.error(e)
-        else:
-            st.session_state.prix = prix
-            st.session_state.apport = apport
-            st.session_state.apport_slider = apport
-            st.session_state.revenu = revenu
-            st.session_state.taux = taux
-            st.session_state.duree = duree
-            st.session_state.started = True
-            st.experimental_rerun()
-else:
-    st.success("Simulation en cours...")
+    with col1:
+        prix = st.number_input("💰 Prix du logement (€)", min_value=0, value=st.session_state.prix, step=1000)
+        apport_pct_list = [10, 15, 20, 25]
+        st.markdown("### Apport personnel")
+        pct_cols = st.columns(len(apport_pct_list))
+        for idx, pct in enumerate(apport_pct_list):
+            if pct_cols[idx].button(f"{pct}%"):
+                apport_calc = int(prix * pct / 100)
+                st.session_state.apport = apport_calc
+                st.session_state.apport_slider = apport_calc
+        apport = st.slider("Apport libre (€)", min_value=0, max_value=prix, value=st.session_state.apport_slider, step=500, key="apport_slider")
+        st.session_state.apport = apport
+        apport_pct = (apport / prix * 100) if prix > 0 else 0
+        st.markdown(f"**Apport sélectionné : {apport:,} € ({apport_pct:.1f}%)**")
+
+    with col2:
+        revenu = st.number_input("👤 Revenu mensuel net (€)", min_value=0, value=st.session_state.revenu, step=100)
+        taux = st.slider("📈 Taux d’intérêt annuel (%)", min_value=0.5, max_value=10.0, value=st.session_state.taux * 100, step=0.1) / 100
+        duree = st.slider("⏳ Durée du prêt (années)", min_value=5, max_value=30, value=st.session_state.duree)
+
+    st.session_state.prix = prix
+    st.session_state.revenu = revenu
+    st.session_state.taux = taux
+    st.session_state.duree = duree
+
+    st.markdown("---")
     if st.button("🔄 Réinitialiser la simulation"):
         reset_all()
         st.experimental_rerun()
@@ -132,7 +123,6 @@ else:
             add_credit_immo()
             st.experimental_rerun()
 
-        # Suppression gérée hors boucle
         st.session_state.to_delete_immo = None
 
         for i, credit in enumerate(st.session_state.credits_immo):
