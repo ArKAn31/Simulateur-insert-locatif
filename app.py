@@ -25,20 +25,22 @@ with tabs[0]:
     with col1:
         prix = st.number_input("Prix du logement (€)", 0, 2_000_000, 250_000, step=1000)
         apport = st.slider("Apport personnel (€)", 0, prix, 20_000, step=1000)
-        loyer_mensuel = st.number_input("Loyer mensuel attendu (€)", 0, 20_000, 1000, step=50)
     with col2:
         revenu = st.number_input("Revenu mensuel (€)", 0, 100_000, 3000, step=100)
         taux = st.slider("Taux d’intérêt annuel (%)", 0.5, 10.0, 3.5, step=0.1) / 100
         duree = st.slider("Durée du prêt (années)", 5, 30, 20)
-        charges_mensuelles = st.number_input("Charges mensuelles (taxes, entretien...) (€)", 0, 10_000, 200, step=50)
+    loyer = st.number_input("Loyer mensuel attendu (€)", 0, 10_000, 1000, step=50)
 
 # --- Crédits existants ---
 with tabs[1]:
     st.header("💳 Crédits existants")
 
+    # Choix du nombre de crédits
     nb_immo = st.selectbox("Nombre de crédits immobiliers", range(6), index=0)
     nb_conso = st.selectbox("Nombre de crédits conso", range(6), index=0)
 
+    # Crédits immo
+    st.subheader("🏠 Crédits immobiliers")
     credits_immo = []
     for i in range(nb_immo):
         with st.expander(f"Crédit immo #{i+1}", expanded=True):
@@ -47,6 +49,8 @@ with tabs[1]:
             duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}", 1, 40, 15, key=f"immo_duree_{i}")
             credits_immo.append({"montant": montant, "taux": taux_, "duree": duree_})
 
+    # Crédits conso
+    st.subheader("💸 Crédits à la consommation")
     credits_conso = []
     for i in range(nb_conso):
         with st.expander(f"Crédit conso #{i+1}", expanded=True):
@@ -59,6 +63,7 @@ with tabs[1]:
 with tabs[2]:
     st.header("📊 Résultats & Synthèse")
 
+    # --- Calculs ---
     total_mensualites_immo = sum(
         mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
         for c in credits_immo
@@ -77,22 +82,22 @@ with tabs[2]:
     total_mensualites = total_credits_existants + total_nouveau_credit
     endettement = total_mensualites / revenu if revenu > 0 else 0
 
-    # Calcul du cashflow (loyer - charges - mensualités)
-    cashflow = loyer_mensuel - charges_mensuelles - total_mensualites
+    # Cashflow = loyer - charges - mensualités
+    charges_mensuelles = 200  # Charges fixes estimées (tu peux rendre ça modifiable si tu veux)
+    cashflow = loyer - charges_mensuelles - total_mensualites
 
+    # --- Affichage simplifié ---
     st.subheader("🧾 Résumé financier mensuel")
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"- **💳 Crédits existants :** {total_credits_existants:,.0f} €")
         st.markdown(f"- **🏠 Nouveau crédit :** {total_nouveau_credit:,.0f} €")
         st.markdown(f"- **🧮 Total mensualités :** {total_mensualites:,.0f} €")
-        st.markdown(f"- **🏢 Loyer mensuel attendu :** {loyer_mensuel:,.0f} €")
-        st.markdown(f"- **🏷️ Charges mensuelles :** {charges_mensuelles:,.0f} €")
-        st.markdown(f"- **💸 Cashflow mensuel :** {cashflow:,.0f} €")
+        st.markdown(f"- **📊 Charges mensuelles estimées :** {charges_mensuelles:,.0f} €")
+        st.markdown(f"- **💵 Loyer attendu :** {loyer:,.0f} €")
     with col2:
         st.markdown(f"- **💰 Revenu mensuel :** {revenu:,.0f} €")
         st.markdown(f"- **📉 Taux d’endettement :** {endettement*100:.1f} %")
-
         if endettement < 0.35:
             st.success("🟢 Endettement maîtrisé")
         elif endettement < 0.45:
@@ -100,27 +105,37 @@ with tabs[2]:
         else:
             st.error("🔴 Endettement élevé — risque de refus bancaire")
 
-        if cashflow > 0:
-            st.success("🟢 Cashflow positif — votre projet est rentable chaque mois")
-        elif cashflow == 0:
-            st.info("🟡 Cashflow neutre — ni perte ni gain chaque mois")
-        else:
-            st.error("🔴 Cashflow négatif — attention, le projet génère un déficit mensuel")
-
-    # Graphique camembert pour répartition du revenu après mensualités
-    st.subheader("📈 Répartition de vos flux mensuels")
-    labels = ["Crédits existants", "Nouveau crédit", "Charges", "Loyer", "Revenu restant"]
-    values = [total_mensualites_immo, mensu_nouveau, charges_mensuelles, loyer_mensuel, max(revenu - total_mensualites - charges_mensuelles, 0)]
+    # Camembert : répartition des revenus
+    st.subheader("📈 Répartition de votre revenu mensuel")
+    labels = ["Crédits existants", "Nouveau crédit", "Charges", "Revenu restant"]
+    values = [total_credits_existants, total_nouveau_credit, charges_mensuelles, max(revenu - total_mensualites - charges_mensuelles, 0)]
 
     fig = go.Figure(go.Pie(
         labels=labels,
         values=values,
         hole=0.4,
-        marker_colors=["#636EFA", "#EF553B", "#FFA500", "#00CC96", "#AB63FA"]
+        marker_colors=["#636EFA", "#EF553B", "#FFA500", "#00CC96"]
     ))
-    fig.update_layout(title="Répartition mensuelle des flux", showlegend=True)
+    fig.update_layout(
+        title="Répartition de votre revenu mensuel",
+        showlegend=True
+    )
     st.plotly_chart(fig, use_container_width=True)
 
+    # Conclusion cashflow
+    st.markdown("### 💡 Conclusion cashflow")
+
+    if cashflow > 0:
+        st.success(f"👍 Votre projet est en cashflow positif avec un excédent de {cashflow:,.0f} € par mois. Cela signifie que vos loyers couvrent vos mensualités et charges, et vous générez un revenu supplémentaire.")
+    else:
+        st.error(f"⚠️ Votre projet est en cashflow négatif de {abs(cashflow):,.0f} € par mois. Pour passer en positif, vous pouvez :")
+        st.markdown("""
+        - Augmenter le montant du loyer attendu si possible  
+        - Réduire le prix d'achat ou augmenter votre apport personnel  
+        - Négocier un meilleur taux ou une durée de prêt plus longue  
+        - Réduire vos charges mensuelles (taxes, charges de copropriété, etc.)  
+        - Réévaluer la rentabilité du projet pour éviter un déficit à long terme
+        """)
 
 
 
