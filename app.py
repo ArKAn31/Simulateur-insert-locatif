@@ -2,7 +2,6 @@
 import streamlit as st
 import plotly.graph_objects as go
 
-# --- Fonctions de calcul ---
 def mensualite_credit(montant, taux_annuel, duree_annees):
     taux_mensuel = taux_annuel / 12
     n = duree_annees * 12
@@ -18,7 +17,6 @@ st.title("🏠 Simulateur Achat Locatif")
 
 tabs = st.tabs(["Paramètres généraux", "Crédits existants", "Résultats"])
 
-# --- Paramètres généraux ---
 with tabs[0]:
     st.header("📋 Paramètres")
     col1, col2 = st.columns(2)
@@ -30,15 +28,11 @@ with tabs[0]:
         taux = st.slider("Taux d’intérêt annuel (%)", 0.5, 10.0, 3.5, step=0.1) / 100
         duree = st.slider("Durée du prêt (années)", 5, 30, 20)
 
-# --- Crédits existants ---
 with tabs[1]:
     st.header("💳 Crédits existants")
-
-    # Choix du nombre de crédits
     nb_immo = st.selectbox("Nombre de crédits immobiliers", range(6), index=0)
     nb_conso = st.selectbox("Nombre de crédits conso", range(6), index=0)
 
-    # Crédits immo
     st.subheader("🏠 Crédits immobiliers")
     credits_immo = []
     for i in range(nb_immo):
@@ -48,7 +42,6 @@ with tabs[1]:
             duree_ = st.number_input(f"Durée restante (années) crédit immo #{i+1}", 1, 40, 15, key=f"immo_duree_{i}")
             credits_immo.append({"montant": montant, "taux": taux_, "duree": duree_})
 
-    # Crédits conso
     st.subheader("💸 Crédits à la consommation")
     credits_conso = []
     for i in range(nb_conso):
@@ -58,15 +51,12 @@ with tabs[1]:
             duree_ = st.number_input(f"Durée restante (années) crédit conso #{i+1}", 1, 30, 5, key=f"conso_duree_{i}")
             credits_conso.append({"montant": montant, "taux": taux_, "duree": duree_})
 
-    # Sauvegarde des crédits dans session_state pour l’onglet Résultats
     st.session_state.credits_immo = credits_immo
     st.session_state.credits_conso = credits_conso
 
-# --- Résultats ---
 with tabs[2]:
     st.header("📊 Résultats & Synthèse")
 
-    # --- Calculs ---
     total_mensualites_immo = sum(
         mensualite_credit(c["montant"], c["taux"], c["duree"]) + calc_assurance(c["montant"])
         for c in st.session_state.get("credits_immo", [])
@@ -85,7 +75,6 @@ with tabs[2]:
     total_mensualites = total_credits_existants + total_nouveau_credit
     endettement = total_mensualites / revenu if revenu > 0 else 0
 
-    # --- Affichage simplifié ---
     st.subheader("🧾 Résumé financier mensuel")
     col1, col2 = st.columns(2)
     with col1:
@@ -103,12 +92,9 @@ with tabs[2]:
         else:
             st.error("🔴 Endettement élevé — risque de refus bancaire")
 
-    # --- Camembert : répartition des revenus ---
     st.subheader("📈 Répartition des revenus mensuels")
-
     labels = ["Crédits existants", "Nouveau crédit", "Revenu restant"]
     values = [total_credits_existants, total_nouveau_credit, max(revenu - total_mensualites, 0)]
-
     fig = go.Figure(go.Pie(
         labels=labels,
         values=values,
@@ -121,6 +107,28 @@ with tabs[2]:
     )
     st.plotly_chart(fig, use_container_width=True)
 
+    # --- Conclusion ---
+    st.subheader("🔍 Conclusion")
+
+    taux_endettement_max = 0.35
+    revenu_disponible = revenu * taux_endettement_max - total_credits_existants
+
+    if revenu_disponible <= 0:
+        st.error("❌ Votre capacité d’emprunt est déjà saturée par vos crédits existants.")
+    else:
+        n = duree * 12
+        taux_mensuel = taux / 12
+        if taux_mensuel == 0:
+            montant_max = revenu_disponible * n
+        else:
+            coeff = (taux_mensuel * (1 + taux_mensuel) ** n) / ((1 + taux_mensuel) ** n - 1)
+            montant_max = revenu_disponible / coeff
+
+        st.markdown(f"💡 **Montant maximal empruntable estimé :** {montant_max:,.0f} €")
+        if montant_max < montant_emprunte:
+            st.warning("⚠️ Attention, le montant emprunté dépasse la capacité d’emprunt recommandée.")
+        else:
+            st.success("✅ Votre projet est compatible avec votre capacité d’emprunt.")
 
 
 
